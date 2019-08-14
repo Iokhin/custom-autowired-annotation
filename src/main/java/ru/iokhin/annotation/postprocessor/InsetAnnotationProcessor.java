@@ -3,12 +3,10 @@ package ru.iokhin.annotation.postprocessor;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.ResolvableType;
 import ru.iokhin.annotation.Inset;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -28,12 +26,19 @@ public class InsetAnnotationProcessor implements BeanPostProcessor {
             if (field.getAnnotation(Inset.class) == null) continue;
             field.setAccessible(true);
             Class<?> type = field.getType();
+            ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+            //FOR SINGLE GENERIC
             try {
-                field.set(bean, context.getBean(type));
-            } catch (IllegalAccessException e) {
+                if (genericType != null) {
+                    String[] beanNamesForType = context.getBeanNamesForType(ResolvableType.forClassWithGenerics(type,
+                            ((Class) genericType.getActualTypeArguments()[0])));
+                    field.set(bean, context.getBean(beanNamesForType[0]));
+                }
+                else {
+                    field.set(bean, context.getBean(type));
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                field.setAccessible(false);
             }
         }
         //METHODS
